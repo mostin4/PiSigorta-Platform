@@ -1,0 +1,20 @@
+{
+  "network": "pi",
+  "strategies": [{
+    "name": "balance-of",
+    "params": {
+      "symbol": "PI",
+      "address": "0xYourPiTokenContract",
+      "decimals": 6
+    }
+  }],
+  "proposals": [
+    {
+      "id": "insurance-expansion-001",
+      "title": "NFT varlıklarını da sigorta kapsamına alalım mı?",
+      "choices": ["Evet", "Hayır"],
+      "start": 1650000000,
+      "end": 1650100000
+    }
+  ]
+}
