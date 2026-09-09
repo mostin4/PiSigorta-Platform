@@ -1,6 +1,61 @@
-{
-  "insurance-expansion-001": {
-    "Evet": 124,
-    "Hayır": 39
+const express = require('express');
+const router = express.Router();
+const { uploadToIPFS } = require('../ipfs/ipfsUpload');
+
+router.post('/process-votes', async (req, res) => {
+  try {
+    const voteResults = req.body; // Örn: { "insurance-expansion-001": { "Evet": 124, "Hayır": 39 } }
+
+    if (!voteResults || Object.keys(voteResults).length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: "Oylama veri seti boş olamaz."
+      });
+    }
+
+    // Her bir teklif için istatistik ve oran hesaplama
+    const processedData = Object.entries(voteResults).map(([proposalId, votes]) => {
+      const totalVotes = Object.values(votes).reduce((acc, curr) => acc + curr, 0);
+      const breakdown = Object.entries(votes).reduce((acc, [choice, count]) => {
+        acc[choice] = {
+          count,
+          percentage: totalVotes > 0 ? Number(((count / totalVotes) * 100).toFixed(2)) : 0
+        };
+        return acc;
+      }, {});
+
+      return {
+        proposalId,
+        totalVotes,
+        breakdown,
+        timestamp: Date.now()
+      };
+    });
+
+    // Sonuçları IPFS'e kaydet
+    const ipfsResult = await uploadToIPFS(processedData);
+
+    if (!ipfsResult.success) {
+      return res.status(502).json({
+        success: false,
+        error: `IPFS kayıt hatası: ${ipfsResult.error}`
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Oylama sonuçları başarıyla analiz edildi ve IPFS'e yüklendi.",
+      cid: ipfsResult.cid,
+      data: processedData
+    });
+
+  } catch (error) {
+    console.error("Oylama İşleme Hatası:", error.message);
+    return res.status(500).json({
+      success: false,
+      error: "Sunucu içi bir hata oluştu."
+    });
   }
-}
+});
+
+module.exports = router;
