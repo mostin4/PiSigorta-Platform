@@ -1,40 +1,69 @@
-interface VoteData {
-  [proposalId: string]: {
-    [choice: string]: number;
-  };
+import { Router, Request, Response } from 'express';
+import { uploadToIPFS } from '../ipfs/ipfsUpload';
+
+const router: Router = Router();
+
+interface VoteRecord {
+  [choice: string]: number;
 }
 
-interface ProcessedResult {
-  proposalId: string;
-  totalVotes: number;
-  breakdown: {
-    [choice: string]: {
-      count: number;
-      percentage: number;
-    };
-  };
+interface VoteResultsPayload {
+  [proposalId: string]: VoteRecord;
 }
 
-export function processVoteResults(voteResults: VoteData): ProcessedResult[] {
-  if (!voteResults || Object.keys(voteResults).length === 0) {
-    return [];
-  }
+router.post('/process-votes', async (req: Request, res: Response): Promise<Response> => {
+  try {
+    const voteResults: VoteResultsPayload = req.body;
 
-  return Object.entries(voteResults).map(([proposalId, votes]) => {
-    const totalVotes = Object.values(votes).reduce((acc, curr) => acc + curr, 0);
-    
-    const breakdown = Object.entries(votes).reduce((acc, [choice, count]) => {
-      acc[choice] = {
-        count,
-        percentage: totalVotes > 0 ? Number(((count / totalVotes) * 100).toFixed(2)) : 0
+    if (!voteResults || Object.keys(voteResults).length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: "Oylama veri seti boş olamaz."
+      });
+    }
+
+    const processedData = Object.entries(voteResults).map(([proposalId, votes]) => {
+      const totalVotes: number = Object.values(votes).reduce((acc: number, curr: number) => acc + curr, 0);
+      
+      const breakdown = Object.entries(votes).reduce((acc, [choice, count]) => {
+        acc[choice] = {
+          count,
+          percentage: totalVotes > 0 ? Number(((count / totalVotes) * 100).toFixed(2)) : 0
+        };
+        return acc;
+      }, {} as Record<string, { count: number; percentage: number }>);
+
+      return {
+        proposalId,
+        totalVotes,
+        breakdown,
+        timestamp: Date.now()
       };
-      return acc;
-    }, {} as ProcessedResult['breakdown']);
+    });
 
-    return {
-      proposalId,
-      totalVotes,
-      breakdown
-    };
-  });
-}
+    const ipfsResult = await uploadToIPFS(processedData);
+
+    if (!ipfsResult.success) {
+      return res.status(502).json({
+        success: false,
+        error: `IPFS kayıt hatası: ${ipfsResult.error}`
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Oylama sonuçları başarıyla analiz edildi ve IPFS'e yüklendi.",
+      cid: ipfsResult.cid,
+      data: processedData
+    });
+
+  } catch (error: any) {
+    console.error("Oylama İşleme Hatası:", error.message);
+    return res.status(500).json({
+      success: false,
+      error: "Sunucu içi bir hata oluştu."
+    });
+  }
+});
+
+export default router;
