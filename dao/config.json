@@ -1,20 +1,23 @@
 {
-  "network": "pi",
-  "strategies": [{
-    "name": "balance-of",
-    "params": {
-      "symbol": "PI",
-      "address": "0xYourPiTokenContract",
-      "decimals": 6
+  "network": "314159", 
+  "strategies": [
+    {
+      "name": "balance-of",
+      "params": {
+        "symbol": "PI",
+        "address": "0xGercekPiTokenKontratAdresiBurayaYazilmalidir",
+        "decimals": 18
+      }
     }
-  }],
+  ],
   "proposals": [
     {
       "id": "insurance-expansion-001",
       "title": "NFT varlıklarını da sigorta kapsamına alalım mı?",
+      "body": "Pi Sigorta platformu risk havuzunun NFT tabanlı dijital varlıkları da kapsayacak şekilde genişletilmesi.",
       "choices": ["Evet", "Hayır"],
-      "start": 1650000000,
-      "end": 1650100000
+      "start": 1775865600,
+      "end": 1776470400
     }
   ]
 }
